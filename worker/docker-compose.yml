@@ -1,0 +1,218 @@
+version: '3.8'
+
+services:
+  # Workers Map especializados - Alta CPU
+  worker-map-1:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    image: gridmr/worker:latest
+    container_name: gridmr-worker-map-1
+    hostname: worker-map-1
+    environment:
+      - GRIDMR_WORKER_WORKER_ID=worker-map-001
+      - GRIDMR_WORKER_WORKER_TYPE=map
+      - GRIDMR_WORKER_WORKER_PORT=8001
+      - GRIDMR_WORKER_MASTER_HOST=master
+      - GRIDMR_WORKER_MASTER_PORT=8000
+      - GRIDMR_WORKER_MAX_CONCURRENT_TASKS=6
+      - GRIDMR_WORKER_WORKER_CPU_CORES=4
+      - GRIDMR_WORKER_WORKER_MEMORY_MB=4096
+      - GRIDMR_WORKER_LOG_LEVEL=INFO
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./data:/app/data
+      - worker-map-1-logs:/app/logs
+      - /exports:/exports:ro  # Mount NFS read-only
+    networks:
+      - gridmr-network
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 4096M
+        reservations:
+          cpus: '2.0'
+          memory: 2048M
+    restart: unless-stopped
+    depends_on:
+      - master
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "gridmr.service=worker"
+      - "gridmr.type=map"
+      - "traefik.enable=false"
+
+  worker-map-2:
+    build: .
+    image: gridmr/worker:latest
+    container_name: gridmr-worker-map-2
+    hostname: worker-map-2
+    environment:
+      - GRIDMR_WORKER_WORKER_ID=worker-map-002
+      - GRIDMR_WORKER_WORKER_TYPE=map
+      - GRIDMR_WORKER_WORKER_PORT=8002
+      - GRIDMR_WORKER_MASTER_HOST=master
+      - GRIDMR_WORKER_MAX_CONCURRENT_TASKS=6
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./data:/app/data
+      - worker-map-2-logs:/app/logs
+      - /exports:/exports:ro
+    networks:
+      - gridmr-network
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 4096M
+    restart: unless-stopped
+    depends_on:
+      - master
+
+  # Workers Reduce especializados - Alta Memoria
+  worker-reduce-1:
+    build: .
+    image: gridmr/worker:latest
+    container_name: gridmr-worker-reduce-1
+    hostname: worker-reduce-1
+    environment:
+      - GRIDMR_WORKER_WORKER_ID=worker-reduce-001
+      - GRIDMR_WORKER_WORKER_TYPE=reduce
+      - GRIDMR_WORKER_WORKER_PORT=8003
+      - GRIDMR_WORKER_MASTER_HOST=master
+      - GRIDMR_WORKER_MAX_CONCURRENT_TASKS=3
+      - GRIDMR_WORKER_WORKER_MEMORY_MB=8192
+      - GRIDMR_WORKER_ENABLE_LARGE_MEMORY_TASKS=true
+    ports:
+      - "8003:8003"
+    volumes:
+      - ./data:/app/data
+      - worker-reduce-1-logs:/app/logs
+      - /exports:/exports:ro
+    networks:
+      - gridmr-network
+    deploy:
+      resources:
+        limits:
+          cpus: '6.0'
+          memory: 8192M
+        reservations:
+          cpus: '3.0'
+          memory: 4096M
+    restart: unless-stopped
+    depends_on:
+      - master
+
+  worker-reduce-2:
+    build: .
+    image: gridmr/worker:latest
+    container_name: gridmr-worker-reduce-2
+    hostname: worker-reduce-2
+    environment:
+      - GRIDMR_WORKER_WORKER_ID=worker-reduce-002
+      - GRIDMR_WORKER_WORKER_TYPE=reduce
+      - GRIDMR_WORKER_WORKER_PORT=8004
+      - GRIDMR_WORKER_MASTER_HOST=master
+      - GRIDMR_WORKER_MAX_CONCURRENT_TASKS=3
+      - GRIDMR_WORKER_WORKER_MEMORY_MB=8192
+    ports:
+      - "8004:8004"
+    volumes:
+      - ./data:/app/data
+      - worker-reduce-2-logs:/app/logs
+      - /exports:/exports:ro
+    networks:
+      - gridmr-network
+    deploy:
+      resources:
+        limits:
+          cpus: '6.0'
+          memory: 8192M
+    restart: unless-stopped
+    depends_on:
+      - master
+
+  # Workers genéricos - Balanceados
+  worker-generic-1:
+    build: .
+    image: gridmr/worker:latest
+    container_name: gridmr-worker-generic-1
+    hostname: worker-generic-1
+    environment:
+      - GRIDMR_WORKER_WORKER_ID=worker-generic-001
+      - GRIDMR_WORKER_WORKER_TYPE=generic
+      - GRIDMR_WORKER_WORKER_PORT=8005
+      - GRIDMR_WORKER_MASTER_HOST=master
+      - GRIDMR_WORKER_MAX_CONCURRENT_TASKS=4
+    ports:
+      - "8005:8005"
+    volumes:
+      - ./data:/app/data
+      - worker-generic-1-logs:/app/logs
+      - /exports:/exports:ro
+    networks:
+      - gridmr-network
+    deploy:
+      resources:
+        limits:
+          cpus: '3.0'
+          memory: 4096M
+    restart: unless-stopped
+    depends_on:
+      - master
+
+  worker-generic-2:
+    build: .
+    image: gridmr/worker:latest
+    container_name: gridmr-worker-generic-2
+    hostname: worker-generic-2
+    environment:
+      - GRIDMR_WORKER_WORKER_ID=worker-generic-002
+      - GRIDMR_WORKER_WORKER_TYPE=generic
+      - GRIDMR_WORKER_WORKER_PORT=8006
+      - GRIDMR_WORKER_MASTER_HOST=master
+      - GRIDMR_WORKER_MAX_CONCURRENT_TASKS=4
+    ports:
+      - "8006:8006"
+    volumes:
+      - ./data:/app/data
+      - worker-generic-2-logs:/app/logs
+      - /exports:/exports:ro
+    networks:
+      - gridmr-network
+    deploy:
+      resources:
+        limits:
+          cpus: '3.0'
+          memory: 4096M
+    restart: unless-stopped
+    depends_on:
+      - master
+
+volumes:
+  worker-map-1-logs:
+    driver: local
+  worker-map-2-logs:
+    driver: local
+  worker-reduce-1-logs:
+    driver: local
+  worker-reduce-2-logs:
+    driver: local
+  worker-generic-1-logs:
+    driver: local
+  worker-generic-2-logs:
+    driver: local
+
+networks:
+  gridmr-network:
+    driver: bridge
+    external: false
+    name: gridmr-network
