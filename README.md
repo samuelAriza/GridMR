@@ -328,36 +328,6 @@ docker-compose logs worker1 | grep "task_"
 python -c "compile(your_function_code, '<string>', 'exec')"
 ```
 
-### Performance Tuning
-
-#### Scaling Workers
-```bash
-# Add more workers by modifying docker-compose.yml
-# Then restart the system:
-docker-compose down
-docker-compose up -d --scale worker1=3 --scale worker2=2
-```
-
-#### Memory Optimization
-```yaml
-# In docker-compose.yml, adjust memory limits:
-services:
-  worker1:
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-        reservations:
-          memory: 1G
-```
-
-#### Storage Performance
-```bash
-# For better I/O performance, use SSD storage for data directory
-# Mount data directory to high-performance storage:
-# /high-speed-storage/gridmr-data:/exports
-```
-
 ## API Reference
 
 ### Job Management Endpoints
@@ -383,59 +353,6 @@ services:
 - `GET /api/v1/metrics/system` - System-wide metrics
 - `GET /api/v1/errors/summary` - Error summary report
 
-## Development
-
-### Local Development Setup
-
-```bash
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r master/requirements.txt
-pip install -r worker/requirements.txt
-
-# Run master locally
-cd master && python main.py
-
-# Run worker locally (in another terminal)
-cd worker && python main.py
-```
-
-### Running Tests
-
-```bash
-# Run unit tests
-python -m pytest tests/
-
-# Run integration tests
-python -m pytest tests/integration/
-
-# Run with coverage
-python -m pytest --cov=master --cov=worker tests/
-```
-
-### Code Quality
-
-```bash
-# Format code
-black master/ worker/ common/
-
-# Lint code
-flake8 master/ worker/ common/
-
-# Type checking
-mypy master/ worker/ common/
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open Pull Request
 
 ### Coding Standards
 
