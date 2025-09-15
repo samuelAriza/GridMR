@@ -1,0 +1,177 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GridMR Performance Test Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .header { background: #f0f0f0; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
+        .summary { background: #e8f4fd; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .section { margin: 20px 0; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #4CAF50; color: white; }
+        .success { color: #4CAF50; }
+        .failure { color: #f44336; }
+        .chart { margin: 20px 0; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 GridMR Performance Test Report</h1>
+        <p><strong>Generated:</strong> 2025-09-14 20:38:21</p>
+        <p><strong>Total Tests:</strong> 4</p>
+    </div>
+    
+    <div class="summary">
+        <h2>📊 Test Summary</h2>
+        <p><strong>File Sizes Tested:</strong> 1.0, 5.0 MB</p>
+        <p><strong>Successful Tests:</strong> <span class="success">4</span></p>
+        <p><strong>Failed Tests:</strong> <span class="failure">0</span></p>
+    </div>
+    
+    <div class="section">
+        <h2>📈 Performance Results</h2>
+        <table>
+            <tr>
+                <th>Test ID</th>
+                <th>File Size (MB)</th>
+                <th>Execution Time (s)</th>
+                <th>Status</th>
+                <th>Tasks (Completed/Total)</th>
+                <th>Avg CPU (%)</th>
+                <th>Max Memory (MB)</th>
+            </tr>
+
+            <tr>
+                <td>1.0MB_iter1</td>
+                <td>1.0</td>
+                <td>10.06</td>
+                <td class="success">completed</td>
+                <td>3/3</td>
+                <td>9.1</td>
+                <td>5294.7</td>
+            </tr>
+
+            <tr>
+                <td>1.0MB_iter2</td>
+                <td>1.0</td>
+                <td>10.05</td>
+                <td class="success">completed</td>
+                <td>3/3</td>
+                <td>14.5</td>
+                <td>5281.0</td>
+            </tr>
+
+            <tr>
+                <td>5.0MB_iter1</td>
+                <td>5.0</td>
+                <td>35.07</td>
+                <td class="success">completed</td>
+                <td>8/8</td>
+                <td>34.5</td>
+                <td>5312.9</td>
+            </tr>
+
+            <tr>
+                <td>5.0MB_iter2</td>
+                <td>5.0</td>
+                <td>40.07</td>
+                <td class="success">completed</td>
+                <td>8/8</td>
+                <td>32.5</td>
+                <td>5303.4</td>
+            </tr>
+
+        </table>
+    </div>
+    
+    <div class="section">
+        <h2>📊 Performance Charts</h2>
+        <div class="chart">
+            <canvas id="executionTimeChart" width="400" height="200"></canvas>
+        </div>
+        <div class="chart">
+            <canvas id="resourceUsageChart" width="400" height="200"></canvas>
+        </div>
+    </div>
+    
+    <script>
+
+        // Execution Time Chart
+        const ctx1 = document.getElementById('executionTimeChart').getContext('2d');
+        new Chart(ctx1, {
+            type: 'line',
+            data: {
+                labels: [1.0, 1.0, 5.0, 5.0],
+                datasets: [{
+                    label: 'Execution Time (s)',
+                    data: [10.058117866516113, 10.05055856704712, 35.06795930862427, 40.067827463150024],
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Execution Time vs File Size'
+                    }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'File Size (MB)' } },
+                    y: { title: { display: true, text: 'Execution Time (s)' } }
+                }
+            }
+        });
+        
+        // Resource Usage Chart
+        const ctx2 = document.getElementById('resourceUsageChart').getContext('2d');
+        new Chart(ctx2, {
+            type: 'bar',
+            data: {
+                labels: [1.0, 1.0, 5.0, 5.0],
+                datasets: [{
+                    label: 'CPU Usage (%)',
+                    data: [9.066666666666666, 14.466666666666667, 34.475, 32.52222222222222],
+                    backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                    yAxisID: 'y'
+                }, {
+                    label: 'Memory Usage (MB)',
+                    data: [5294.703125, 5281.0, 5312.90625, 5303.35546875],
+                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    yAxisID: 'y1'
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Resource Usage vs File Size'
+                    }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'File Size (MB)' } },
+                    y: { 
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: { display: true, text: 'CPU Usage (%)' }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: { display: true, text: 'Memory Usage (MB)' },
+                        grid: { drawOnChartArea: false }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

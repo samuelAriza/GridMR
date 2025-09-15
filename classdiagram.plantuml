@@ -1,0 +1,512 @@
+@startuml GridMR_MapReduce_Framework
+
+!theme plain
+skinparam classAttributeIconSize 0
+skinparam backgroundColor #FEFEFE
+skinparam packageStyle rectangle
+skinparam classBorderColor #2E4057
+skinparam classHeaderBackgroundColor #E8F4FD
+skinparam arrowColor #2E4057
+
+' ========== MASTER PACKAGE ==========
+package "master" {
+    
+    package "api" {
+        class JobRequest {
+            + client_id: str
+            + job_name: str
+            + map_function: str
+            + reduce_function: str
+            + input_data_path: str
+            + output_data_path: str
+            + split_size: int
+            + num_reducers: int
+            + parameters: Dict
+        }
+        
+        class JobResponse {
+            + job_id: str
+            + status: str
+            + message: str
+        }
+        
+        class TaskAssignmentRequest {
+            + task_id: str
+            + job_id: str
+            + task_type: str
+            + map_function: str
+            + reduce_function: str
+            + input_splits: List[str]
+            + output_path: str
+            + parameters: Dict
+        }
+        
+        class WorkerRegistrationRequest {
+            + worker_id: str
+            + host: str
+            + port: int
+            + worker_type: str
+            + capabilities: Dict
+        }
+        
+        class MasterRoutes {
+            + job_manager: JobManager
+            + worker_registry: WorkerRegistry
+            + submit_job(request: JobRequest): JobResponse
+            + get_job_status(job_id: str): Dict
+            + register_worker(request: WorkerRegistrationRequest): Dict
+            + complete_task(task_id: str, result: Dict): Dict
+            + fail_task(task_id: str, error: str): Dict
+            + health_check(): Dict
+        }
+    }
+    
+    package "core" {
+        class JobManager {
+            - jobs: Dict[str, MapReduceJob]
+            - tasks: Dict[str, Task]
+            - job_tasks: Dict[str, List[str]]
+            - job_map_tasks: Dict[str, List[str]]
+            - job_reduce_tasks: Dict[str, List[str]]
+            - data_splitter: DataSplitter
+            - task_scheduler: TaskScheduler
+            + submit_job(job: MapReduceJob): str
+            + update_task_status(task_id: str, status: TaskStatus, result: Dict): void
+            + get_job_status(job_id: str): Dict
+            - _create_map_tasks(job: MapReduceJob): void
+            - _create_reduce_tasks(job: MapReduceJob): void
+            - _check_map_phase_completion(job_id: str): void
+            - _check_reduce_phase_completion(job_id: str): void
+            - _consolidate_final_results(job: MapReduceJob): void
+        }
+        
+        class TaskScheduler {
+            - worker_registry: WorkerRegistry
+            + schedule_task(task: Task): void
+            + get_available_workers(task_type: str): List[Worker]
+            - _send_task_to_worker(task: Task, worker: Worker): void
+            - _check_worker_status(worker: Worker): Dict
+        }
+        
+        class DataSplitter {
+            + split_data(input_path: str, split_size: int): List[str]
+            - _calculate_split_size(file_size: int, target_size: int): int
+            - _create_split_file(content: str, output_path: str): void
+        }
+        
+        class ResultCollector {
+            + collect_results(job_id: str): Dict
+            + merge_reduce_outputs(output_files: List[str]): str
+        }
+    }
+    
+    package "models" {
+        enum JobStatus {
+            PENDING
+            RUNNING
+            COMPLETED
+            FAILED
+            CANCELLED
+        }
+        
+        enum TaskStatus {
+            PENDING
+            ASSIGNED
+            RUNNING
+            COMPLETED
+            FAILED
+        }
+        
+        enum TaskType {
+            MAP
+            REDUCE
+        }
+        
+        class MapReduceJob {
+            + job_id: str
+            + client_id: str
+            + job_name: str
+            + status: JobStatus
+            + map_function: str
+            + reduce_function: str
+            + input_data_path: str
+            + output_data_path: str
+            + split_size: int
+            + num_reducers: int
+            + parameters: Dict
+            + created_at: datetime
+            + updated_at: datetime
+            + error_message: str
+        }
+        
+        class Task {
+            + task_id: str
+            + job_id: str
+            + task_type: TaskType
+            + status: TaskStatus
+            + input_splits: List[str]
+            + output_path: str
+            + assigned_worker: str
+            + map_function: str
+            + reduce_function: str
+            + parameters: Dict
+            + result: Dict
+            + created_at: datetime
+            + updated_at: datetime
+        }
+        
+        enum WorkerStatus {
+            AVAILABLE
+            BUSY
+            OFFLINE
+            ERROR
+        }
+        
+        class WorkerCapacity {
+            + cpu_cores: int
+            + memory_mb: int
+            + max_concurrent_tasks: int
+        }
+        
+        class Worker {
+            + worker_id: str
+            + host: str
+            + port: int
+            + status: WorkerStatus
+            + worker_type: str
+            + capacity: WorkerCapacity
+            + current_tasks: List[str]
+            + last_heartbeat: datetime
+            + total_completed_tasks: int
+            + total_failed_tasks: int
+        }
+    }
+    
+    package "services" {
+        class WorkerRegistry {
+            - workers: Dict[str, Worker]
+            + add_worker(worker: Worker): void
+            + get_worker(worker_id: str): Worker
+            + get_available_workers(task_type: str): List[Worker]
+            + update_worker_status(worker_id: str, status: WorkerStatus): void
+            + remove_worker(worker_id: str): void
+            + get_all_workers(): List[Worker]
+        }
+    }
+    
+    package "utils" {
+        class MasterConfig {
+            + host: str
+            + port: int
+            + max_workers: int
+            + heartbeat_interval: int
+            + task_timeout: int
+        }
+        
+        class Logger {
+            + get_logger(name: str): logging.Logger
+        }
+    }
+}
+
+' ========== WORKER PACKAGE ==========
+package "worker" {
+    
+    package "api" {
+        class TaskAssignmentRequest {
+            + task_id: str
+            + job_id: str
+            + task_type: str
+            + map_function: str
+            + reduce_function: str
+            + input_splits: List[str]
+            + output_path: str
+            + parameters: Dict
+        }
+        
+        class WorkerRoutes {
+            + worker_engine: WorkerEngine
+            + resource_monitor: ResourceMonitor
+            + assign_task(request: TaskAssignmentRequest): Dict
+            + get_status(): Dict
+            + get_metrics(): Dict
+            + health_check(): Dict
+        }
+    }
+    
+    package "core" {
+        class WorkerEngine {
+            - worker_id: str
+            - master_client: MasterClient
+            - task_executor: TaskExecutor
+            - resource_monitor: ResourceMonitor
+            - heartbeat_service: HeartbeatService
+            - data_manager: DataManager
+            - metrics_collector: MetricsCollector
+            + start(): void
+            + stop(): void
+            + submit_task(task_data: Dict): void
+            + get_worker_status(): Dict
+            - _process_task_queue(): void
+        }
+        
+        class TaskExecutor {
+            - map_processor: MapProcessor
+            - reduce_processor: ReduceProcessor
+            + execute_task(task_context: TaskContext): Dict
+            - _validate_task_context(context: TaskContext): void
+        }
+        
+        class MapProcessor {
+            - data_manager: DataManager
+            - sandbox: ExecutionSandbox
+            + process(task_context: TaskContext): Dict
+            - _get_input_data(input_splits: List[str]): List[Tuple]
+            - _execute_map_function(func: callable, data: List, context: TaskContext): List
+            - _save_map_output(results: List, output_path: str, num_reducers: int): List[str]
+            - _partition_data(key: str, num_reducers: int): int
+        }
+        
+        class ReduceProcessor {
+            - data_manager: DataManager
+            - sandbox: ExecutionSandbox
+            + process(task_context: TaskContext): Dict
+            - _get_and_group_input_data(input_files: List[str]): Dict
+            - _execute_reduce_function(func: callable, grouped_data: Dict, context: TaskContext): List
+            - _save_reduce_output(results: List, output_path: str): str
+        }
+        
+        class ResourceMonitor {
+            - monitoring_active: bool
+            - metrics_collector: MetricsCollector
+            + start(): void
+            + stop(): void
+            + get_system_metrics(): Dict
+            + get_resource_usage(): Dict
+            - _monitor_resources(): void
+        }
+    }
+    
+    package "models" {
+        class TaskContext {
+            + task_id: str
+            + job_id: str
+            + task_type: TaskType
+            + input_splits: List[str]
+            + output_path: str
+            + map_function: str
+            + reduce_function: str
+            + parameters: Dict
+        }
+    }
+    
+    package "services" {
+        class MasterClient {
+            - master_host: str
+            - master_port: int
+            - worker_id: str
+            + register_with_master(): void
+            + report_task_completion(task_id: str, result: Dict): void
+            + report_task_failure(task_id: str, error: str): void
+            + send_heartbeat(status: Dict): void
+            - _get_worker_capabilities(): Dict
+        }
+        
+        class DataManager {
+            - cache_dir: str
+            + start(): void
+            + stop(): void
+            + get_data_split(split_path: str): str
+            + save_output_data(data: str, output_path: str): void
+            - _download_from_url(url: str): str
+            - _find_local_file(path: str): str
+            - _cleanup_cache(): void
+        }
+        
+        class ExecutionSandbox {
+            - timeout_seconds: int
+            + execute_function(func_code: str, func_name: str, args: List): Any
+            + compile_function(func_code: str, func_name: str): callable
+            - _create_restricted_globals(): Dict
+        }
+        
+        class HeartbeatService {
+            - master_client: MasterClient
+            - worker_engine: WorkerEngine
+            - resource_monitor: ResourceMonitor
+            - heartbeat_interval: int
+            - running: bool
+            + start(): void
+            + stop(): void
+            - _heartbeat_loop(): void
+            - _get_worker_status(): Dict
+        }
+    }
+    
+    package "utils" {
+        class WorkerConfig {
+            + worker_id: str
+            + worker_type: str
+            + worker_port: int
+            + master_host: str
+            + master_port: int
+            + max_concurrent_tasks: int
+            + worker_cpu_cores: int
+            + worker_memory_mb: int
+            + log_level: str
+        }
+        
+        class MetricsCollector {
+            - metrics: Dict
+            + record_metric(name: str, value: float): void
+            + increment_counter(name: str): void
+            + get_metrics(): Dict
+            + reset_metrics(): void
+        }
+        
+        class Logger {
+            + get_logger(name: str): logging.Logger
+        }
+    }
+}
+
+' ========== COMMON PACKAGE ==========
+package "common" {
+    
+    package "exceptions" {
+        abstract class GridMRException {
+            + message: str
+            + error_code: str
+        }
+        
+        class JobException {
+            + job_id: str
+        }
+        
+        class TaskException {
+            + task_id: str
+        }
+        
+        class WorkerException {
+            + worker_id: str
+        }
+    }
+    
+    package "models" {
+        abstract class BaseModel {
+            + created_at: datetime
+            + updated_at: datetime
+            + to_dict(): Dict
+            + from_dict(data: Dict): BaseModel
+        }
+        
+        class CommunicationMessage {
+            + message_id: str
+            + sender_id: str
+            + message_type: str
+            + payload: Dict
+            + timestamp: datetime
+        }
+    }
+    
+    package "utils" {
+        class Constants {
+            + DEFAULT_PORT: int
+            + MAX_RETRIES: int
+            + TIMEOUT_SECONDS: int
+            + CHUNK_SIZE: int
+        }
+        
+        class Validation {
+            + validate_job_request(request: JobRequest): bool
+            + validate_task_data(data: Dict): bool
+            + validate_worker_registration(request: WorkerRegistrationRequest): bool
+        }
+    }
+}
+
+' ========== CLIENT PACKAGE ==========
+package "client" {
+    class GridMRClient {
+        - master_host: str
+        - master_port: int
+        + submit_job(job_request: JobRequest): str
+        + get_job_status(job_id: str): Dict
+        + wait_for_completion(job_id: str, timeout: int): Dict
+        + cancel_job(job_id: str): bool
+    }
+    
+    class JobBuilder {
+        - job_request: JobRequest
+        + set_job_name(name: str): JobBuilder
+        + set_input_path(path: str): JobBuilder
+        + set_output_path(path: str): JobBuilder
+        + set_map_function(func: str): JobBuilder
+        + set_reduce_function(func: str): JobBuilder
+        + set_parameters(params: Dict): JobBuilder
+        + build(): JobRequest
+    }
+}
+
+' ========== RELATIONSHIPS ==========
+
+' Master relationships
+JobManager ||--o{ MapReduceJob : manages
+JobManager ||--o{ Task : tracks
+JobManager ||-- TaskScheduler : uses
+JobManager ||-- DataSplitter : uses
+TaskScheduler ||-- WorkerRegistry : queries
+WorkerRegistry ||--o{ Worker : stores
+MasterRoutes ||-- JobManager : uses
+MasterRoutes ||-- WorkerRegistry : uses
+
+' Model relationships
+MapReduceJob ||-- JobStatus : has
+Task ||-- TaskStatus : has
+Task ||-- TaskType : has
+Worker ||-- WorkerStatus : has
+Worker ||-- WorkerCapacity : contains
+
+' Worker relationships
+WorkerEngine ||-- TaskExecutor : contains
+WorkerEngine ||-- MasterClient : uses
+WorkerEngine ||-- ResourceMonitor : monitors
+WorkerEngine ||-- HeartbeatService : runs
+WorkerEngine ||-- DataManager : uses
+TaskExecutor ||-- MapProcessor : uses
+TaskExecutor ||-- ReduceProcessor : uses
+MapProcessor ||-- ExecutionSandbox : uses
+ReduceProcessor ||-- ExecutionSandbox : uses
+HeartbeatService ||-- MasterClient : uses
+WorkerRoutes ||-- WorkerEngine : uses
+
+' Task flow relationships
+TaskScheduler ..> MasterClient : sends tasks
+MasterClient ..> WorkerRoutes : HTTP requests
+TaskExecutor ||-- TaskContext : processes
+
+' Exception hierarchy
+GridMRException <|-- JobException
+GridMRException <|-- TaskException
+GridMRException <|-- WorkerException
+
+' Base model inheritance
+BaseModel <|-- MapReduceJob
+BaseModel <|-- Task
+BaseModel <|-- Worker
+
+' Client relationships
+GridMRClient ..> MasterRoutes : HTTP API
+JobBuilder ..> JobRequest : creates
+
+note right of JobManager : "Orchestrates complete MapReduce\nworkflow with automatic\nphase transitions"
+
+note right of TaskScheduler : "Assigns tasks to workers based\non availability and capabilities"
+
+note right of WorkerEngine : "Main worker orchestration engine\nmanaging task execution lifecycle"
+
+note right of ExecutionSandbox : "Secure environment for executing\nuser-defined map/reduce functions"
+
+note right of DataManager : "Handles data transfer and caching\nfor distributed file operations"
+
+@enduml
