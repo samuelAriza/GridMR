@@ -1,9 +1,9 @@
 # ST0263 - Tópicos Especiales en Telemática
 
 # Estudiantes:
-- Samuel Andrés Ariza Gómez, sariza3@eafit.edu.co
-- Juan Manuel Montoya Arango, jmontoy26@eafit.edu.co  
-- Isabela Osorio, iosoriog@eafit.edu.co
+- Samuel Andrés Ariza Gómez
+- Juan Manuel Montoya Arango 
+- Isabela Osorio
 
 # Profesor: 
 Edwin Nelson Montoya Munera, emontoya@eafit.edu.co
@@ -26,6 +26,7 @@ La solución implementa una arquitectura master-worker con almacenamiento compar
 - ✅ **Ejecución segura de código**: Ambiente sandboxed para ejecución segura de funciones definidas por el usuario
 - ✅ **Monitoreo y logging**: Sistema comprensivo de monitoreo con métricas detalladas de ejecución
 - ✅ **Containerización**: Despliegue orquestado con Docker Compose y networking apropiado
+- ✅ **Testing automatizado**: Suite completa de pruebas de rendimiento y generación de datos de prueba
 
 ### Requerimientos No Funcionales:
 - ✅ **Tolerancia a fallos**: Mecanismos automáticos de retry y manejo graceful de errores
